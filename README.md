@@ -18,6 +18,7 @@ Discord bot to uwuify messages from targeted users via webhook impersonation and
 
 Requires `Manage Server` permission:
 - `/uwu add <user>` / `/uwu remove <user>` / `/uwu list`: Manage target users.
+- `/uwu chance <percent>`: Set server-wide random chance (0-100%) for everyone.
 - `/uwu mode <webhook|reply>`: Switch between Webhook impersonation and Reply mode.
 - `/suppress add <keyword>` / `/suppress remove <keyword>` / `/suppress list`: Manage link domains/keywords to strip embeds from.
 

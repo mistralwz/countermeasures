@@ -1,19 +1,13 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
-import { exec, spawn } from 'node:child_process';
-import { promisify } from 'node:util';
 import {
   getConfig,
   addTargetUserId,
   removeTargetUserId,
   setUwuMode,
-  setDeleteOriginalMessage,
-  setUwuChance,
-  setTargetEveryone,
+  setGlobalChance,
   addSuppressKeyword,
   removeSuppressKeyword,
 } from './config.js';
-
-const execAsync = promisify(exec);
 
 export const uwuCommand = {
   data: new SlashCommandBuilder()
@@ -32,16 +26,18 @@ export const uwuCommand = {
         .setDescription('Remove a user from being uwuified')
         .addUserOption((opt) => opt.setName('user').setDescription('Target user').setRequired(true))
     )
-    .addSubcommand((sub) => sub.setName('list').setDescription('List targeted users'))
+    .addSubcommand((sub) => sub.setName('list').setDescription('List targeted users and global chance'))
     .addSubcommand((sub) =>
       sub
-        .setName('everyone')
-        .setDescription('Toggle whether uwuification applies to everyone or only targeted users')
-        .addBooleanOption((opt) =>
+        .setName('chance')
+        .setDescription('Set random uwuify chance for everyone in the server')
+        .addIntegerOption((opt) =>
           opt
-            .setName('enabled')
-            .setDescription('True to apply to everyone, false for targeted users only')
-            .setRequired(false)
+            .setName('percent')
+            .setDescription('Chance percentage (0-100, 0 = disabled)')
+            .setRequired(true)
+            .setMinValue(0)
+            .setMaxValue(100)
         )
     )
     .addSubcommand((sub) =>
@@ -57,30 +53,6 @@ export const uwuCommand = {
               { name: 'Webhook (Impersonate & Delete)', value: 'webhook' },
               { name: 'Reply (Direct quote reply)', value: 'reply' }
             )
-        )
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName('delete_message')
-        .setDescription('Toggle deleting the original message in webhook mode')
-        .addBooleanOption((opt) =>
-          opt
-            .setName('enabled')
-            .setDescription('True to delete original message, false to keep it')
-            .setRequired(false)
-        )
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName('chance')
-        .setDescription('Set or toggle random uwuify chance (e.g. 50% vs always 100%)')
-        .addIntegerOption((opt) =>
-          opt
-            .setName('percent')
-            .setDescription('Chance in percentage (0 to 100). Omit to toggle between 50% and 100%')
-            .setMinValue(0)
-            .setMaxValue(100)
-            .setRequired(false)
         )
     ),
 
@@ -102,45 +74,32 @@ export const uwuCommand = {
         content: ok ? `Removed <@${user.id}> from uwu targets.` : `<@${user.id}> was not targeted.`,
         ephemeral: true,
       });
-    } else if (sub === 'list') {
-      const list = cfg.targetUserIds.map((id, i) => `${i + 1}. <@${id}> (\`${id}\`)`).join('\n') || '_None_';
-      const chancePct = Math.round((cfg.uwuChance ?? 1.0) * 100);
-      const scopeText = cfg.targetEveryone ? '⚠️ **Scope:** Everyone (all users)' : '🎯 **Scope:** Targeted users only';
-      const embed = new EmbedBuilder()
-        .setTitle('Target Users')
-        .setDescription(`${scopeText}\n\n${list}`)
-        .setFooter({
-          text: `Scope: ${cfg.targetEveryone ? 'Everyone' : 'Targeted'} | Mode: ${cfg.uwuMode} | Delete Messages: ${cfg.deleteOriginalMessage !== false ? 'Enabled' : 'Disabled'} | Chance: ${chancePct}% | Targets: ${cfg.targetUserIds.length}`,
-        });
-      await interaction.reply({ embeds: [embed], ephemeral: true });
-    } else if (sub === 'everyone') {
-      const explicit = interaction.options.getBoolean('enabled');
-      const nextVal = explicit !== null ? explicit : !cfg.targetEveryone;
-      await setTargetEveryone(nextVal);
+    } else if (sub === 'chance') {
+      const pct = interaction.options.getInteger('percent');
+      const val = await setGlobalChance(pct / 100);
       await interaction.reply({
-        content: `👥 Uwuify target scope is now: **${nextVal ? 'Everyone (all users)' : 'Targeted users only'}**`,
+        content:
+          val > 0
+            ? `🎲 Global uwu chance set to **${pct}%** (messages from anyone have a ${pct}% chance of being uwuified).`
+            : `🎲 Global uwu chance **disabled** (only targeted users will be uwuified).`,
         ephemeral: true,
       });
+    } else if (sub === 'list') {
+      const list = cfg.targetUserIds.map((id, i) => `${i + 1}. <@${id}> (\`${id}\`)`).join('\n') || '_None_';
+      const globalPct = Math.round((cfg.globalChance || 0) * 100);
+      const embed = new EmbedBuilder()
+        .setTitle('Uwuify Configuration')
+        .setDescription(`**Targeted Users:**\n${list}`)
+        .addFields({
+          name: '🎲 Global Random Chance',
+          value: `${globalPct}% (${globalPct > 0 ? 'Active for everyone' : 'Disabled'})`,
+        })
+        .setFooter({ text: `Mode: ${cfg.uwuMode} | Targets: ${cfg.targetUserIds.length}` });
+      await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'mode') {
       const mode = interaction.options.getString('type');
       await setUwuMode(mode);
       await interaction.reply({ content: `Uwu mode set to: **${mode}**`, ephemeral: true });
-    } else if (sub === 'delete_message') {
-      const explicit = interaction.options.getBoolean('enabled');
-      const nextVal = explicit !== null ? explicit : !cfg.deleteOriginalMessage;
-      await setDeleteOriginalMessage(nextVal);
-      await interaction.reply({
-        content: `Original message deletion is now: **${nextVal ? 'Enabled' : 'Disabled'}**`,
-        ephemeral: true,
-      });
-    } else if (sub === 'chance') {
-      const explicit = interaction.options.getInteger('percent');
-      const nextChance = explicit !== null ? explicit / 100 : ((cfg.uwuChance ?? 1.0) >= 1.0 ? 0.5 : 1.0);
-      await setUwuChance(nextChance);
-      await interaction.reply({
-        content: `🎲 Random uwuify chance is now: **${Math.round(nextChance * 100)}%**${nextChance === 1.0 ? ' (Always)' : ''}`,
-        ephemeral: true,
-      });
     }
   },
 };
@@ -195,52 +154,5 @@ export const suppressCommand = {
   },
 };
 
-export const updateCommand = {
-  data: new SlashCommandBuilder()
-    .setName('update')
-    .setDescription('Pull latest changes from git and restart the bot')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-
-  async execute(interaction) {
-    await interaction.deferReply({ ephemeral: true });
-
-    try {
-      const { stdout, stderr } = await execAsync('git pull');
-      const output = (stdout || stderr || 'Already up to date.').trim();
-
-      await interaction.editReply({
-        content: `🔄 **Git Pull Output:**\n\`\`\`\n${output.slice(0, 1800)}\n\`\`\`\nRestarting bot...`,
-      });
-
-      setTimeout(async () => {
-        try {
-          await interaction.client.destroy();
-        } catch {}
-
-        const isSupervised =
-          process.env.pm_id !== undefined ||
-          process.env.PM2_HOME !== undefined ||
-          process.env.INVOCATION_ID !== undefined;
-
-        if (!isSupervised) {
-          const child = spawn(process.argv[0], process.argv.slice(1), {
-            detached: true,
-            stdio: 'inherit',
-            cwd: process.cwd(),
-            env: process.env,
-          });
-          child.unref();
-        }
-        process.exit(0);
-      }, 1000);
-    } catch (err) {
-      console.error('[Update] Error during update:', err);
-      await interaction.editReply({
-        content: `❌ **Update Failed:**\n\`\`\`\n${(err.message || String(err)).slice(0, 1800)}\n\`\`\``,
-      });
-    }
-  },
-};
-
-export const commands = [uwuCommand, suppressCommand, updateCommand];
+export const commands = [uwuCommand, suppressCommand];
 export const commandMap = new Map(commands.map((c) => [c.data.name, c]));

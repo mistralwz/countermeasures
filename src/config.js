@@ -3,10 +3,9 @@ import fs from 'node:fs';
 const CONFIG_URL = new URL('../config.json', import.meta.url);
 const DEFAULTS = {
   targetUserIds: [],
-  targetEveryone: false,
   suppressKeywords: ['twitter.com', 'x.com', 'tiktok.com', 'instagram.com'],
   uwuMode: 'webhook',
-  uwuChance: 1.0,
+  globalChance: 0,
   deleteOriginalMessage: true,
 };
 
@@ -28,23 +27,17 @@ export function getConfig() {
   return current;
 }
 
+let writeChain = Promise.resolve();
 export function saveConfig() {
-  try {
-    const tmp = new URL('../config.json.tmp', import.meta.url);
-    fs.writeFileSync(tmp, JSON.stringify(current, null, 2));
-    fs.renameSync(tmp, CONFIG_URL);
-  } catch (err) {
-    console.error('[Config] Save error:', err.message);
-  }
+  writeChain = writeChain.then(async () => {
+    const tmp = new URL(`../config.json.tmp`, import.meta.url);
+    await fs.promises.writeFile(tmp, JSON.stringify(current, null, 2));
+    await fs.promises.rename(tmp, CONFIG_URL);
+  }).catch((err) => console.error('[Config] Save error:', err.message));
+  return writeChain;
 }
 
-export const isTargetUser = (id) => Boolean(current.targetEveryone || current.targetUserIds.includes(id));
-
-export async function setTargetEveryone(val) {
-  current.targetEveryone = Boolean(val);
-  await saveConfig();
-  return current.targetEveryone;
-}
+export const isTargetUser = (id) => current.targetUserIds.includes(id);
 
 export async function addTargetUserId(id) {
   if (current.targetUserIds.includes(id)) return false;
@@ -85,18 +78,10 @@ export async function setUwuMode(mode) {
   return true;
 }
 
-export async function setDeleteOriginalMessage(val) {
-  current.deleteOriginalMessage = Boolean(val);
+export async function setGlobalChance(chance) {
+  const c = Math.max(0, Math.min(1, Number(chance) || 0));
+  current.globalChance = c;
   await saveConfig();
-  return current.deleteOriginalMessage;
+  return c;
 }
-
-export async function setUwuChance(chance) {
-  const num = Number(chance);
-  if (isNaN(num) || num < 0 || num > 1) return false;
-  current.uwuChance = num;
-  await saveConfig();
-  return current.uwuChance;
-}
-
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { uwuify, isUwufiable } from '../src/uwuify.js';
+import { uwuify } from '../src/uwuify.js';
 import {
   getConfig,
   addTargetUserId,
@@ -8,11 +8,9 @@ import {
   addSuppressKeyword,
   removeSuppressKeyword,
   setUwuMode,
-  setDeleteOriginalMessage,
-  setUwuChance,
-  setTargetEveryone,
+  setGlobalChance,
 } from '../src/config.js';
-import { uwuCommand, suppressCommand, updateCommand } from '../src/commands.js';
+import { uwuCommand, suppressCommand } from '../src/commands.js';
 
 let passed = 0;
 let total = 0;
@@ -53,51 +51,14 @@ async function runTests() {
     assert.ok(res.includes(mention));
   });
 
-  await test('isUwufiable identifies non-uwufiable vs uwufiable content', () => {
-    // Non-uwufiable: empty or image/attachment only
-    assert.strictEqual(isUwufiable(''), false);
-    assert.strictEqual(isUwufiable('   '), false);
-    assert.strictEqual(isUwufiable(null), false);
-
-    // Non-uwufiable: URLs only
-    assert.strictEqual(isUwufiable('https://tenor.com/view/cat-gif-12345'), false);
-    assert.strictEqual(isUwufiable('http://example.com https://another.com'), false);
-
-    // Non-uwufiable: Custom emojis, mentions, channels, timestamps
-    assert.strictEqual(isUwufiable('<:pepe:123456789012345678>'), false);
-    assert.strictEqual(isUwufiable('<@1234567890> <#9876543210>'), false);
-    assert.strictEqual(isUwufiable('<t:1700000000:R>'), false);
-
-    // Non-uwufiable: Code blocks only
-    assert.strictEqual(isUwufiable('```js\nconsole.log(123);\n```'), false);
-    assert.strictEqual(isUwufiable('`const x = 1;`'), false);
-
-    // Non-uwufiable: Numbers and symbols only
-    assert.strictEqual(isUwufiable('12345 67890 ??? :3 !!!'), false);
-
-    // Uwufiable: Real text
-    assert.strictEqual(isUwufiable('hello world'), true);
-    assert.strictEqual(isUwufiable('Look at this: https://example.com'), true);
-    assert.strictEqual(isUwufiable('Good morning! <:pepe:12345>'), true);
-  });
-
   await test('Config manager targets', async () => {
     const id = '111222333444555666';
-    await setTargetEveryone(false);
     await removeTargetUserId(id);
     assert.strictEqual(isTargetUser(id), false);
     await addTargetUserId(id);
     assert.strictEqual(isTargetUser(id), true);
     await removeTargetUserId(id);
     assert.strictEqual(isTargetUser(id), false);
-
-    // When targetEveryone is true, any user is targeted
-    await setTargetEveryone(true);
-    assert.strictEqual(getConfig().targetEveryone, true);
-    assert.strictEqual(isTargetUser(id), true);
-    assert.strictEqual(isTargetUser('999888777666555444'), true);
-    await setTargetEveryone(false);
-    assert.strictEqual(isTargetUser('999888777666555444'), false);
   });
 
   await test('Config manager keywords & mode', async () => {
@@ -111,31 +72,15 @@ async function runTests() {
     await setUwuMode('webhook');
     assert.strictEqual(getConfig().uwuMode, 'webhook');
 
-    await setDeleteOriginalMessage(false);
-    assert.strictEqual(getConfig().deleteOriginalMessage, false);
-    await setDeleteOriginalMessage(true);
-    assert.strictEqual(getConfig().deleteOriginalMessage, true);
-
-    await setUwuChance(0.42);
-    assert.strictEqual(getConfig().uwuChance, 0.42);
-    await setUwuChance(1.0);
-    assert.strictEqual(getConfig().uwuChance, 1.0);
-    assert.strictEqual(await setUwuChance(-0.1), false);
-    assert.strictEqual(await setUwuChance(1.5), false);
+    await setGlobalChance(0.25);
+    assert.strictEqual(getConfig().globalChance, 0.25);
+    await setGlobalChance(0);
+    assert.strictEqual(getConfig().globalChance, 0);
   });
 
   await test('Commands serialize to Discord JSON', () => {
-    const uwuJson = uwuCommand.data.toJSON();
-    assert.strictEqual(uwuJson.name, 'uwu');
-    const deleteSub = uwuJson.options.find((o) => o.name === 'delete_message');
-    assert.ok(deleteSub);
-    const chanceSub = uwuJson.options.find((o) => o.name === 'chance');
-    assert.ok(chanceSub);
-    const everyoneSub = uwuJson.options.find((o) => o.name === 'everyone');
-    assert.ok(everyoneSub);
-
+    assert.strictEqual(uwuCommand.data.toJSON().name, 'uwu');
     assert.strictEqual(suppressCommand.data.toJSON().name, 'suppress');
-    assert.strictEqual(updateCommand.data.toJSON().name, 'update');
   });
 
   await test('File name suppression matching logic', () => {
@@ -169,4 +114,3 @@ async function runTests() {
 }
 
 runTests();
-

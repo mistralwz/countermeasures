@@ -1,6 +1,6 @@
 import { PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { getConfig, isTargetUser } from './config.js';
-import { uwuify, isUwufiable } from './uwuify.js';
+import { uwuify } from './uwuify.js';
 
 const webhookCache = new Map();
 
@@ -26,19 +26,19 @@ async function getWebhook(channel, client) {
 
 export async function handleUwu(message) {
   if (!message.author || message.author.bot || message.webhookId) return;
-  if (!isTargetUser(message.author.id)) return;
-
-  const text = message.content?.trim() || '';
-  if (!isUwufiable(text)) return;
 
   const cfg = getConfig();
-  const chance = cfg.uwuChance ?? 1.0;
-  if (chance < 1.0 && (chance <= 0 || Math.random() > chance)) return;
+  const isTarget = isTargetUser(message.author.id);
+  const hitGlobal = (cfg.globalChance || 0) > 0 && Math.random() < cfg.globalChance;
 
-  const uwuText = uwuify(text);
-  if (!uwuText || uwuText === text) return;
+  // Trigger if explicitly targeted OR if random global chance hits
+  if (!isTarget && !hitGlobal) return;
 
-  const files = message.attachments.map((a) => a.url);
+  const text = message.content?.trim() || '';
+  const files = Array.from(message.attachments.values()).map((a) => a.url);
+  if (!text && !files.length) return;
+
+  const uwuText = text ? uwuify(text) : '';
   const perms = message.channel.permissionsFor?.(message.client.user);
 
   // Webhook Impersonation
@@ -77,7 +77,7 @@ export async function handleEmbeds(message) {
   if (!cfg.suppressKeywords?.length) return;
 
   const content = (message.content || '').toLowerCase();
-  const fileNames = message.attachments?.map((a) => (a.name || '').toLowerCase()) || [];
+  const fileNames = Array.from(message.attachments?.values() || []).map((a) => (a.name || '').toLowerCase());
 
   const shouldSuppress = cfg.suppressKeywords.some((kw) => {
     if (!kw) return false;
