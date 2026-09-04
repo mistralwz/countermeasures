@@ -77,3 +77,10 @@ export async function setUwuMode(mode) {
   await saveConfig();
   return true;
 }
+
+export async function setDeleteOriginalMessage(val) {
+  current.deleteOriginalMessage = Boolean(val);
+  await saveConfig();
+  return current.deleteOriginalMessage;
+}
+

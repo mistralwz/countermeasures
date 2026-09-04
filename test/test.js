@@ -8,8 +8,9 @@ import {
   addSuppressKeyword,
   removeSuppressKeyword,
   setUwuMode,
+  setDeleteOriginalMessage,
 } from '../src/config.js';
-import { uwuCommand, suppressCommand } from '../src/commands.js';
+import { uwuCommand, suppressCommand, updateCommand } from '../src/commands.js';
 
 let passed = 0;
 let total = 0;
@@ -98,11 +99,21 @@ async function runTests() {
     assert.strictEqual(getConfig().uwuMode, 'reply');
     await setUwuMode('webhook');
     assert.strictEqual(getConfig().uwuMode, 'webhook');
+
+    await setDeleteOriginalMessage(false);
+    assert.strictEqual(getConfig().deleteOriginalMessage, false);
+    await setDeleteOriginalMessage(true);
+    assert.strictEqual(getConfig().deleteOriginalMessage, true);
   });
 
   await test('Commands serialize to Discord JSON', () => {
-    assert.strictEqual(uwuCommand.data.toJSON().name, 'uwu');
+    const uwuJson = uwuCommand.data.toJSON();
+    assert.strictEqual(uwuJson.name, 'uwu');
+    const deleteSub = uwuJson.options.find((o) => o.name === 'delete_message');
+    assert.ok(deleteSub);
+
     assert.strictEqual(suppressCommand.data.toJSON().name, 'suppress');
+    assert.strictEqual(updateCommand.data.toJSON().name, 'update');
   });
 
   await test('File name suppression matching logic', () => {

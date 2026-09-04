@@ -1,12 +1,17 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import { exec, spawn } from 'node:child_process';
+import { promisify } from 'node:util';
 import {
   getConfig,
   addTargetUserId,
   removeTargetUserId,
   setUwuMode,
+  setDeleteOriginalMessage,
   addSuppressKeyword,
   removeSuppressKeyword,
 } from './config.js';
+
+const execAsync = promisify(exec);
 
 export const uwuCommand = {
   data: new SlashCommandBuilder()
@@ -40,6 +45,17 @@ export const uwuCommand = {
               { name: 'Reply (Direct quote reply)', value: 'reply' }
             )
         )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('delete_message')
+        .setDescription('Toggle deleting the original message in webhook mode')
+        .addBooleanOption((opt) =>
+          opt
+            .setName('enabled')
+            .setDescription('True to delete original message, false to keep it')
+            .setRequired(false)
+        )
     ),
 
   async execute(interaction) {
@@ -65,12 +81,22 @@ export const uwuCommand = {
       const embed = new EmbedBuilder()
         .setTitle('Target Users')
         .setDescription(list)
-        .setFooter({ text: `Mode: ${cfg.uwuMode} | Total: ${cfg.targetUserIds.length}` });
+        .setFooter({
+          text: `Mode: ${cfg.uwuMode} | Delete Messages: ${cfg.deleteOriginalMessage !== false ? 'Enabled' : 'Disabled'} | Total: ${cfg.targetUserIds.length}`,
+        });
       await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'mode') {
       const mode = interaction.options.getString('type');
       await setUwuMode(mode);
       await interaction.reply({ content: `Uwu mode set to: **${mode}**`, ephemeral: true });
+    } else if (sub === 'delete_message') {
+      const explicit = interaction.options.getBoolean('enabled');
+      const nextVal = explicit !== null ? explicit : !cfg.deleteOriginalMessage;
+      await setDeleteOriginalMessage(nextVal);
+      await interaction.reply({
+        content: `Original message deletion is now: **${nextVal ? 'Enabled' : 'Disabled'}**`,
+        ephemeral: true,
+      });
     }
   },
 };
@@ -125,5 +151,52 @@ export const suppressCommand = {
   },
 };
 
-export const commands = [uwuCommand, suppressCommand];
+export const updateCommand = {
+  data: new SlashCommandBuilder()
+    .setName('update')
+    .setDescription('Pull latest changes from git and restart the bot')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  async execute(interaction) {
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+      const { stdout, stderr } = await execAsync('git pull');
+      const output = (stdout || stderr || 'Already up to date.').trim();
+
+      await interaction.editReply({
+        content: `🔄 **Git Pull Output:**\n\`\`\`\n${output.slice(0, 1800)}\n\`\`\`\nRestarting bot...`,
+      });
+
+      setTimeout(async () => {
+        try {
+          await interaction.client.destroy();
+        } catch {}
+
+        const isSupervised =
+          process.env.pm_id !== undefined ||
+          process.env.PM2_HOME !== undefined ||
+          process.env.INVOCATION_ID !== undefined;
+
+        if (!isSupervised) {
+          const child = spawn(process.argv[0], process.argv.slice(1), {
+            detached: true,
+            stdio: 'inherit',
+            cwd: process.cwd(),
+            env: process.env,
+          });
+          child.unref();
+        }
+        process.exit(0);
+      }, 1000);
+    } catch (err) {
+      console.error('[Update] Error during update:', err);
+      await interaction.editReply({
+        content: `❌ **Update Failed:**\n\`\`\`\n${(err.message || String(err)).slice(0, 1800)}\n\`\`\``,
+      });
+    }
+  },
+};
+
+export const commands = [uwuCommand, suppressCommand, updateCommand];
 export const commandMap = new Map(commands.map((c) => [c.data.name, c]));
