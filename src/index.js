@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits, Events } from 'discord.js';
 import dotenv from 'dotenv';
-import { commandMap } from './commands.js';
+import { commandMap, commands } from './commands.js';
 import { handleUwu, handleEmbeds } from './handlers.js';
 
 dotenv.config();
@@ -13,8 +13,24 @@ const client = new Client({
   ],
 });
 
-client.once(Events.ClientReady, (c) => {
+client.once(Events.ClientReady, async (c) => {
   console.log(`[Countermeasures] Online as ${c.user.tag} across ${c.guilds.cache.size} guild(s).`);
+
+  // Auto-sync commands on startup (overwrites and clears any stale/removed commands)
+  try {
+    const body = commands.map((cmd) => cmd.data.toJSON());
+    const guildId = process.env.GUILD_ID?.trim();
+
+    if (guildId) {
+      await c.application.commands.set(body, guildId);
+      console.log(`[Commands] Synced ${body.length} commands to guild ${guildId} (stale commands removed).`);
+    } else {
+      await c.application.commands.set(body);
+      console.log(`[Commands] Synced ${body.length} commands globally (stale commands removed).`);
+    }
+  } catch (err) {
+    console.error('[Commands] Auto-sync failed on startup:', err.message);
+  }
 });
 
 client.on(Events.InteractionCreate, async (i) => {
