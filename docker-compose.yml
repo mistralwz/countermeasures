@@ -1,0 +1,9 @@
+services:
+  countermeasures:
+    build: .
+    container_name: countermeasures
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./config.json:/app/config.json

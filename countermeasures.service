@@ -1,0 +1,17 @@
+[Unit]
+Description=Countermeasures Discord Bot
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/countermeasures
+ExecStart=/usr/bin/node /opt/countermeasures/src/index.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+{
+  "name": "countermeasures",
+  "version": "1.0.0",
+  "description": "Discord bot to uwuify target users via webhooks and suppress link embeds",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy-commands": "node src/deploy-commands.js",
+    "test": "node test/test.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  }
+}

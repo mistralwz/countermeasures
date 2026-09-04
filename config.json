@@ -1,0 +1,12 @@
+{
+  "targetUserIds": [],
+  "suppressKeywords": [
+    "twitter.com",
+    "x.com",
+    "tiktok.com",
+    "instagram.com"
+  ],
+  "uwuMode": "webhook",
+  "uwuChance": 1,
+  "deleteOriginalMessage": true
+}
