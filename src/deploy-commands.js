@@ -11,16 +11,35 @@ if (!DISCORD_TOKEN || !CLIENT_ID) {
 }
 
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
-const body = commands.map((c) => c.data.toJSON());
+const isClear = process.argv.includes('--clear');
+const body = isClear ? [] : commands.map((c) => c.data.toJSON());
 
-try {
-  console.log(`[Deploy] Registering ${body.length} commands...`);
-  const route = GUILD_ID?.trim()
-    ? Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID.trim())
-    : Routes.applicationCommands(CLIENT_ID);
+async function run() {
+  try {
+    if (isClear) {
+      console.log('[Deploy] Wiping ALL slash commands (guild and global)...');
+      if (GUILD_ID?.trim()) {
+        await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID.trim()), { body: [] });
+        console.log(`[Deploy] Cleared guild commands for ${GUILD_ID.trim()}.`);
+      }
+      await rest.put(Routes.applicationCommands(CLIENT_ID), { body: [] });
+      console.log('[Deploy] Cleared global commands.');
+      console.log('[Deploy] All commands wiped cleanly.');
+      return;
+    }
 
-  await rest.put(route, { body });
-  console.log(`[Deploy] Successfully registered commands.`);
-} catch (err) {
-  console.error('[Deploy] Failed to register:', err.message);
+    if (GUILD_ID?.trim()) {
+      console.log(`[Deploy] Registering ${body.length} commands to guild ${GUILD_ID.trim()}...`);
+      await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID.trim()), { body });
+      console.log(`[Deploy] Successfully updated guild commands.`);
+    } else {
+      console.log(`[Deploy] Registering ${body.length} commands globally...`);
+      await rest.put(Routes.applicationCommands(CLIENT_ID), { body });
+      console.log(`[Deploy] Successfully updated global commands.`);
+    }
+  } catch (err) {
+    console.error('[Deploy] Error:', err.message);
+  }
 }
+
+run();
