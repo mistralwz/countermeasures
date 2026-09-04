@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { PermissionFlagsBits, MessageFlags, AttachmentBuilder } from 'discord.js';
 import { getConfig, isTargetUser } from './config.js';
 import { uwuify, isUwufiable } from './uwuify.js';
 
@@ -42,7 +42,28 @@ export async function handleUwu(message) {
   // Skip if content did not change at all
   if (!uwuText || uwuText.trim() === text) return;
 
-  const files = Array.from(message.attachments.values()).map((a) => a.url);
+  // Download attachments into memory before deleting original message
+  let validFiles = [];
+  if (message.attachments?.size > 0) {
+    const downloaded = await Promise.all(
+      Array.from(message.attachments.values()).map(async (att) => {
+        try {
+          const res = await fetch(att.url);
+          if (!res.ok) return null;
+          const buf = Buffer.from(await res.arrayBuffer());
+          return new AttachmentBuilder(buf, {
+            name: att.name,
+            description: att.description || undefined,
+          });
+        } catch (err) {
+          console.error('[Uwu] Failed to download attachment:', err.message);
+          return null;
+        }
+      })
+    );
+    validFiles = downloaded.filter(Boolean);
+  }
+
   const perms = message.channel.permissionsFor?.(message.client.user);
 
   // Webhook Impersonation
@@ -50,17 +71,20 @@ export async function handleUwu(message) {
     try {
       const hook = await getWebhook(message.channel, message.client);
       if (hook) {
-        if (cfg.deleteOriginalMessage !== false) {
-          await message.delete().catch(() => {});
-        }
+        // Send webhook with re-uploaded attachments first
         await hook.send({
           content: uwuText || undefined,
           username: (message.member?.displayName || message.author.username).slice(0, 80),
           avatarURL: message.author.displayAvatarURL({ extension: 'png', size: 512 }),
-          files: files.length ? files : undefined,
+          files: validFiles.length ? validFiles : undefined,
           threadId: message.channel.isThread?.() ? message.channel.id : undefined,
           allowedMentions: { parse: ['users'] },
         });
+
+        // Delete original message ONLY after webhook delivery succeeds
+        if (cfg.deleteOriginalMessage !== false) {
+          await message.delete().catch(() => {});
+        }
         return;
       }
     } catch (err) {
