@@ -37,6 +37,16 @@ async function runTests() {
     assert.match(res, /weaw/i);
   });
 
+  await test('Uwuify vocabulary replacements', () => {
+    const res = uwuify('stop, that small cat is so cute and fluffy, please love it!', { faceChance: 0, stutterChance: 0 });
+    assert.match(res, /yamete/i);
+    assert.match(res, /smol/i);
+    assert.match(res, /kawaii~/i);
+    assert.match(res, /floofy/i);
+    assert.match(res, /pwease/i);
+    assert.match(res, /wuv/i);
+  });
+
   await test('Uwuify preserves URLs', () => {
     const url = 'https://twitter.com/user/status/123456?ref=real_test';
     const res = uwuify(`Check link: ${url}`, { faceChance: 0, stutterChance: 0 });
