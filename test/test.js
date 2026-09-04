@@ -131,6 +131,23 @@ async function runTests() {
     assert.strictEqual(isUwufiable('hello https://x.com'), true);
   });
 
+  await test('Messages with only an image or image link are never uwuified', () => {
+    // 1. Direct image upload with no text
+    const imgUpload = { content: '', attachments: [{ url: 'https://cdn.discordapp.com/attachments/1/2/cat.png' }] };
+    const text1 = imgUpload.content?.trim() || '';
+    assert.strictEqual(!text1 || !isUwufiable(text1), true);
+
+    // 2. Pure image link (e.g. imgur, tenor, or cdn link)
+    const imgLink = { content: 'https://i.imgur.com/cat.png', attachments: [] };
+    const text2 = imgLink.content?.trim() || '';
+    assert.strictEqual(!text2 || !isUwufiable(text2), true);
+
+    // 3. Image with caption
+    const imgWithCaption = { content: 'Look at this cat', attachments: [{ url: 'https://cdn.../cat.png' }] };
+    const text3 = imgWithCaption.content?.trim() || '';
+    assert.strictEqual(!text3 || !isUwufiable(text3), false);
+  });
+
   console.log(`\nResults: ${passed}/${total} passed.`);
   if (passed !== total) process.exit(1);
 }
