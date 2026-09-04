@@ -52,3 +52,9 @@ export function uwuify(text, options = {}) {
 
   return out.length > 2000 ? out.slice(0, 1997) + '...' : out;
 }
+
+export function isUwufiable(text) {
+  if (!text || typeof text !== 'string') return false;
+  const stripped = text.replace(PROTECTED, '').trim();
+  return /[a-zA-Z]/.test(stripped);
+}

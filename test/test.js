@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { uwuify } from '../src/uwuify.js';
+import { uwuify, isUwufiable } from '../src/uwuify.js';
 import {
   getConfig,
   addTargetUserId,
@@ -48,6 +48,34 @@ async function runTests() {
     const res = uwuify(`Look at ${emoji} and ${mention}`, { faceChance: 0, stutterChance: 0 });
     assert.ok(res.includes(emoji));
     assert.ok(res.includes(mention));
+  });
+
+  await test('isUwufiable identifies non-uwufiable vs uwufiable content', () => {
+    // Non-uwufiable: empty or image/attachment only
+    assert.strictEqual(isUwufiable(''), false);
+    assert.strictEqual(isUwufiable('   '), false);
+    assert.strictEqual(isUwufiable(null), false);
+
+    // Non-uwufiable: URLs only
+    assert.strictEqual(isUwufiable('https://tenor.com/view/cat-gif-12345'), false);
+    assert.strictEqual(isUwufiable('http://example.com https://another.com'), false);
+
+    // Non-uwufiable: Custom emojis, mentions, channels, timestamps
+    assert.strictEqual(isUwufiable('<:pepe:123456789012345678>'), false);
+    assert.strictEqual(isUwufiable('<@1234567890> <#9876543210>'), false);
+    assert.strictEqual(isUwufiable('<t:1700000000:R>'), false);
+
+    // Non-uwufiable: Code blocks only
+    assert.strictEqual(isUwufiable('```js\nconsole.log(123);\n```'), false);
+    assert.strictEqual(isUwufiable('`const x = 1;`'), false);
+
+    // Non-uwufiable: Numbers and symbols only
+    assert.strictEqual(isUwufiable('12345 67890 ??? :3 !!!'), false);
+
+    // Uwufiable: Real text
+    assert.strictEqual(isUwufiable('hello world'), true);
+    assert.strictEqual(isUwufiable('Look at this: https://example.com'), true);
+    assert.strictEqual(isUwufiable('Good morning! <:pepe:12345>'), true);
   });
 
   await test('Config manager targets', async () => {
@@ -108,3 +136,4 @@ async function runTests() {
 }
 
 runTests();
+
