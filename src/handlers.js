@@ -38,7 +38,7 @@ export async function handleUwu(message) {
   const uwuText = uwuify(text);
   if (!uwuText || uwuText === text) return;
 
-  const files = Array.from(message.attachments.values()).map((a) => a.url);
+  const files = message.attachments.map((a) => a.url);
   const perms = message.channel.permissionsFor?.(message.client.user);
 
   // Webhook Impersonation
@@ -77,7 +77,7 @@ export async function handleEmbeds(message) {
   if (!cfg.suppressKeywords?.length) return;
 
   const content = (message.content || '').toLowerCase();
-  const fileNames = Array.from(message.attachments?.values() || []).map((a) => (a.name || '').toLowerCase());
+  const fileNames = message.attachments?.map((a) => (a.name || '').toLowerCase()) || [];
 
   const shouldSuppress = cfg.suppressKeywords.some((kw) => {
     if (!kw) return false;

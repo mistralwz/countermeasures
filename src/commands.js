@@ -135,16 +135,10 @@ export const uwuCommand = {
       });
     } else if (sub === 'chance') {
       const explicit = interaction.options.getInteger('percent');
-      let nextChance;
-      if (explicit !== null) {
-        nextChance = explicit / 100;
-      } else {
-        nextChance = (cfg.uwuChance ?? 1.0) >= 1.0 ? 0.5 : 1.0;
-      }
+      const nextChance = explicit !== null ? explicit / 100 : ((cfg.uwuChance ?? 1.0) >= 1.0 ? 0.5 : 1.0);
       await setUwuChance(nextChance);
-      const pctDisplay = `${Math.round(nextChance * 100)}%`;
       await interaction.reply({
-        content: `🎲 Random uwuify chance is now: **${pctDisplay}**${nextChance === 1.0 ? ' (Always)' : ''}`,
+        content: `🎲 Random uwuify chance is now: **${Math.round(nextChance * 100)}%**${nextChance === 1.0 ? ' (Always)' : ''}`,
         ephemeral: true,
       });
     }

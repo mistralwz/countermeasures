@@ -28,14 +28,14 @@ export function getConfig() {
   return current;
 }
 
-let writeChain = Promise.resolve();
 export function saveConfig() {
-  writeChain = writeChain.then(async () => {
-    const tmp = new URL(`../config.json.tmp`, import.meta.url);
-    await fs.promises.writeFile(tmp, JSON.stringify(current, null, 2));
-    await fs.promises.rename(tmp, CONFIG_URL);
-  }).catch((err) => console.error('[Config] Save error:', err.message));
-  return writeChain;
+  try {
+    const tmp = new URL('../config.json.tmp', import.meta.url);
+    fs.writeFileSync(tmp, JSON.stringify(current, null, 2));
+    fs.renameSync(tmp, CONFIG_URL);
+  } catch (err) {
+    console.error('[Config] Save error:', err.message);
+  }
 }
 
 export const isTargetUser = (id) => Boolean(current.targetEveryone || current.targetUserIds.includes(id));
