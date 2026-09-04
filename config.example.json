@@ -8,6 +8,6 @@
     "instagram.com"
   ],
   "uwuMode": "webhook",
-  "uwuChance": 1,
+  "uwuChance": 1.0,
   "deleteOriginalMessage": true
 }
