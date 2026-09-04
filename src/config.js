@@ -84,3 +84,12 @@ export async function setDeleteOriginalMessage(val) {
   return current.deleteOriginalMessage;
 }
 
+export async function setUwuChance(chance) {
+  const num = Number(chance);
+  if (isNaN(num) || num < 0 || num > 1) return false;
+  current.uwuChance = num;
+  await saveConfig();
+  return current.uwuChance;
+}
+
+

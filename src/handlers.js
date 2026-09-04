@@ -32,7 +32,8 @@ export async function handleUwu(message) {
   if (!isUwufiable(text)) return;
 
   const cfg = getConfig();
-  if (cfg.uwuChance && Math.random() > cfg.uwuChance) return;
+  const chance = cfg.uwuChance ?? 1.0;
+  if (chance < 1.0 && (chance <= 0 || Math.random() > chance)) return;
 
   const uwuText = uwuify(text);
   if (!uwuText || uwuText === text) return;

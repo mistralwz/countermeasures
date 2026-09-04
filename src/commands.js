@@ -7,6 +7,7 @@ import {
   removeTargetUserId,
   setUwuMode,
   setDeleteOriginalMessage,
+  setUwuChance,
   addSuppressKeyword,
   removeSuppressKeyword,
 } from './config.js';
@@ -56,6 +57,19 @@ export const uwuCommand = {
             .setDescription('True to delete original message, false to keep it')
             .setRequired(false)
         )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('chance')
+        .setDescription('Set or toggle random uwuify chance (e.g. 50% vs always 100%)')
+        .addIntegerOption((opt) =>
+          opt
+            .setName('percent')
+            .setDescription('Chance in percentage (0 to 100). Omit to toggle between 50% and 100%')
+            .setMinValue(0)
+            .setMaxValue(100)
+            .setRequired(false)
+        )
     ),
 
   async execute(interaction) {
@@ -78,11 +92,12 @@ export const uwuCommand = {
       });
     } else if (sub === 'list') {
       const list = cfg.targetUserIds.map((id, i) => `${i + 1}. <@${id}> (\`${id}\`)`).join('\n') || '_None_';
+      const chancePct = Math.round((cfg.uwuChance ?? 1.0) * 100);
       const embed = new EmbedBuilder()
         .setTitle('Target Users')
         .setDescription(list)
         .setFooter({
-          text: `Mode: ${cfg.uwuMode} | Delete Messages: ${cfg.deleteOriginalMessage !== false ? 'Enabled' : 'Disabled'} | Total: ${cfg.targetUserIds.length}`,
+          text: `Mode: ${cfg.uwuMode} | Delete Messages: ${cfg.deleteOriginalMessage !== false ? 'Enabled' : 'Disabled'} | Chance: ${chancePct}% | Total: ${cfg.targetUserIds.length}`,
         });
       await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'mode') {
@@ -95,6 +110,20 @@ export const uwuCommand = {
       await setDeleteOriginalMessage(nextVal);
       await interaction.reply({
         content: `Original message deletion is now: **${nextVal ? 'Enabled' : 'Disabled'}**`,
+        ephemeral: true,
+      });
+    } else if (sub === 'chance') {
+      const explicit = interaction.options.getInteger('percent');
+      let nextChance;
+      if (explicit !== null) {
+        nextChance = explicit / 100;
+      } else {
+        nextChance = (cfg.uwuChance ?? 1.0) >= 1.0 ? 0.5 : 1.0;
+      }
+      await setUwuChance(nextChance);
+      const pctDisplay = `${Math.round(nextChance * 100)}%`;
+      await interaction.reply({
+        content: `🎲 Random uwuify chance is now: **${pctDisplay}**${nextChance === 1.0 ? ' (Always)' : ''}`,
         ephemeral: true,
       });
     }

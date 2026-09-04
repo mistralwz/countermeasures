@@ -9,6 +9,7 @@ import {
   removeSuppressKeyword,
   setUwuMode,
   setDeleteOriginalMessage,
+  setUwuChance,
 } from '../src/config.js';
 import { uwuCommand, suppressCommand, updateCommand } from '../src/commands.js';
 
@@ -104,6 +105,13 @@ async function runTests() {
     assert.strictEqual(getConfig().deleteOriginalMessage, false);
     await setDeleteOriginalMessage(true);
     assert.strictEqual(getConfig().deleteOriginalMessage, true);
+
+    await setUwuChance(0.42);
+    assert.strictEqual(getConfig().uwuChance, 0.42);
+    await setUwuChance(1.0);
+    assert.strictEqual(getConfig().uwuChance, 1.0);
+    assert.strictEqual(await setUwuChance(-0.1), false);
+    assert.strictEqual(await setUwuChance(1.5), false);
   });
 
   await test('Commands serialize to Discord JSON', () => {
@@ -111,6 +119,8 @@ async function runTests() {
     assert.strictEqual(uwuJson.name, 'uwu');
     const deleteSub = uwuJson.options.find((o) => o.name === 'delete_message');
     assert.ok(deleteSub);
+    const chanceSub = uwuJson.options.find((o) => o.name === 'chance');
+    assert.ok(chanceSub);
 
     assert.strictEqual(suppressCommand.data.toJSON().name, 'suppress');
     assert.strictEqual(updateCommand.data.toJSON().name, 'update');
