@@ -68,11 +68,20 @@ export async function handleUwu(message) {
 }
 
 export async function handleEmbeds(message) {
-  if (!message?.content || !message.channel || message.flags?.has(MessageFlags.SuppressEmbeds)) return;
+  if (!message || message.flags?.has(MessageFlags.SuppressEmbeds)) return;
 
   const cfg = getConfig();
-  const lower = message.content.toLowerCase();
-  const shouldSuppress = cfg.suppressKeywords.some((kw) => kw && lower.includes(kw.toLowerCase()));
+  if (!cfg.suppressKeywords?.length) return;
+
+  const content = (message.content || '').toLowerCase();
+  const fileNames = Array.from(message.attachments?.values() || []).map((a) => (a.name || '').toLowerCase());
+
+  const shouldSuppress = cfg.suppressKeywords.some((kw) => {
+    if (!kw) return false;
+    const k = kw.toLowerCase();
+    return content.includes(k) || fileNames.some((name) => name.includes(k));
+  });
+
   if (!shouldSuppress) return;
 
   if (message.guild && !message.channel.permissionsFor?.(message.client.user)?.has(PermissionFlagsBits.ManageMessages)) {

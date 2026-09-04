@@ -77,6 +77,32 @@ async function runTests() {
     assert.strictEqual(suppressCommand.data.toJSON().name, 'suppress');
   });
 
+  await test('File name suppression matching logic', () => {
+    const keywords = ['spoiler.mp4', 'secret.pdf', 'tiktok.com'];
+    const msgWithAttachment = {
+      content: 'Here is a file',
+      attachments: [{ name: 'SPOILER.MP4' }],
+    };
+    const msgWithUrlFile = {
+      content: 'Check out https://example.com/files/secret.pdf',
+      attachments: [],
+    };
+    const msgNormal = {
+      content: 'Just chatting',
+      attachments: [{ name: 'cute_cat.png' }],
+    };
+
+    const check = (msg) => {
+      const content = msg.content.toLowerCase();
+      const files = msg.attachments.map((a) => a.name.toLowerCase());
+      return keywords.some((kw) => content.includes(kw) || files.some((f) => f.includes(kw)));
+    };
+
+    assert.strictEqual(check(msgWithAttachment), true);
+    assert.strictEqual(check(msgWithUrlFile), true);
+    assert.strictEqual(check(msgNormal), false);
+  });
+
   console.log(`\nResults: ${passed}/${total} passed.`);
   if (passed !== total) process.exit(1);
 }

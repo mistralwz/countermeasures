@@ -78,21 +78,26 @@ export const uwuCommand = {
 export const suppressCommand = {
   data: new SlashCommandBuilder()
     .setName('suppress')
-    .setDescription('Manage link domains/keywords for embed suppression')
+    .setDescription('Manage keywords, domains, or file names for embed suppression')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((sub) =>
       sub
         .setName('add')
-        .setDescription('Add a keyword/domain to suppress embeds')
-        .addStringOption((opt) => opt.setName('keyword').setDescription('Domain or keyword').setRequired(true))
+        .setDescription('Add a keyword, domain, or file name to suppress embeds')
+        .addStringOption((opt) =>
+          opt
+            .setName('keyword')
+            .setDescription('Domain, keyword, or file name (e.g. x.com, spoiler.mp4)')
+            .setRequired(true)
+        )
     )
     .addSubcommand((sub) =>
       sub
         .setName('remove')
-        .setDescription('Remove a keyword/domain')
-        .addStringOption((opt) => opt.setName('keyword').setDescription('Domain or keyword').setRequired(true))
+        .setDescription('Remove a keyword, domain, or file name')
+        .addStringOption((opt) => opt.setName('keyword').setDescription('Keyword or file name to remove').setRequired(true))
     )
-    .addSubcommand((sub) => sub.setName('list').setDescription('List active keywords')),
+    .addSubcommand((sub) => sub.setName('list').setDescription('List active keywords and file names')),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
