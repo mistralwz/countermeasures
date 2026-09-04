@@ -8,6 +8,7 @@ import {
   setUwuMode,
   setDeleteOriginalMessage,
   setUwuChance,
+  setTargetEveryone,
   addSuppressKeyword,
   removeSuppressKeyword,
 } from './config.js';
@@ -32,6 +33,17 @@ export const uwuCommand = {
         .addUserOption((opt) => opt.setName('user').setDescription('Target user').setRequired(true))
     )
     .addSubcommand((sub) => sub.setName('list').setDescription('List targeted users'))
+    .addSubcommand((sub) =>
+      sub
+        .setName('everyone')
+        .setDescription('Toggle whether uwuification applies to everyone or only targeted users')
+        .addBooleanOption((opt) =>
+          opt
+            .setName('enabled')
+            .setDescription('True to apply to everyone, false for targeted users only')
+            .setRequired(false)
+        )
+    )
     .addSubcommand((sub) =>
       sub
         .setName('mode')
@@ -93,13 +105,22 @@ export const uwuCommand = {
     } else if (sub === 'list') {
       const list = cfg.targetUserIds.map((id, i) => `${i + 1}. <@${id}> (\`${id}\`)`).join('\n') || '_None_';
       const chancePct = Math.round((cfg.uwuChance ?? 1.0) * 100);
+      const scopeText = cfg.targetEveryone ? '⚠️ **Scope:** Everyone (all users)' : '🎯 **Scope:** Targeted users only';
       const embed = new EmbedBuilder()
         .setTitle('Target Users')
-        .setDescription(list)
+        .setDescription(`${scopeText}\n\n${list}`)
         .setFooter({
-          text: `Mode: ${cfg.uwuMode} | Delete Messages: ${cfg.deleteOriginalMessage !== false ? 'Enabled' : 'Disabled'} | Chance: ${chancePct}% | Total: ${cfg.targetUserIds.length}`,
+          text: `Scope: ${cfg.targetEveryone ? 'Everyone' : 'Targeted'} | Mode: ${cfg.uwuMode} | Delete Messages: ${cfg.deleteOriginalMessage !== false ? 'Enabled' : 'Disabled'} | Chance: ${chancePct}% | Targets: ${cfg.targetUserIds.length}`,
         });
       await interaction.reply({ embeds: [embed], ephemeral: true });
+    } else if (sub === 'everyone') {
+      const explicit = interaction.options.getBoolean('enabled');
+      const nextVal = explicit !== null ? explicit : !cfg.targetEveryone;
+      await setTargetEveryone(nextVal);
+      await interaction.reply({
+        content: `👥 Uwuify target scope is now: **${nextVal ? 'Everyone (all users)' : 'Targeted users only'}**`,
+        ephemeral: true,
+      });
     } else if (sub === 'mode') {
       const mode = interaction.options.getString('type');
       await setUwuMode(mode);

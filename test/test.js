@@ -10,6 +10,7 @@ import {
   setUwuMode,
   setDeleteOriginalMessage,
   setUwuChance,
+  setTargetEveryone,
 } from '../src/config.js';
 import { uwuCommand, suppressCommand, updateCommand } from '../src/commands.js';
 
@@ -82,12 +83,21 @@ async function runTests() {
 
   await test('Config manager targets', async () => {
     const id = '111222333444555666';
+    await setTargetEveryone(false);
     await removeTargetUserId(id);
     assert.strictEqual(isTargetUser(id), false);
     await addTargetUserId(id);
     assert.strictEqual(isTargetUser(id), true);
     await removeTargetUserId(id);
     assert.strictEqual(isTargetUser(id), false);
+
+    // When targetEveryone is true, any user is targeted
+    await setTargetEveryone(true);
+    assert.strictEqual(getConfig().targetEveryone, true);
+    assert.strictEqual(isTargetUser(id), true);
+    assert.strictEqual(isTargetUser('999888777666555444'), true);
+    await setTargetEveryone(false);
+    assert.strictEqual(isTargetUser('999888777666555444'), false);
   });
 
   await test('Config manager keywords & mode', async () => {
@@ -121,6 +131,8 @@ async function runTests() {
     assert.ok(deleteSub);
     const chanceSub = uwuJson.options.find((o) => o.name === 'chance');
     assert.ok(chanceSub);
+    const everyoneSub = uwuJson.options.find((o) => o.name === 'everyone');
+    assert.ok(everyoneSub);
 
     assert.strictEqual(suppressCommand.data.toJSON().name, 'suppress');
     assert.strictEqual(updateCommand.data.toJSON().name, 'update');

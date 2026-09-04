@@ -3,6 +3,7 @@ import fs from 'node:fs';
 const CONFIG_URL = new URL('../config.json', import.meta.url);
 const DEFAULTS = {
   targetUserIds: [],
+  targetEveryone: false,
   suppressKeywords: ['twitter.com', 'x.com', 'tiktok.com', 'instagram.com'],
   uwuMode: 'webhook',
   uwuChance: 1.0,
@@ -37,7 +38,13 @@ export function saveConfig() {
   return writeChain;
 }
 
-export const isTargetUser = (id) => current.targetUserIds.includes(id);
+export const isTargetUser = (id) => Boolean(current.targetEveryone || current.targetUserIds.includes(id));
+
+export async function setTargetEveryone(val) {
+  current.targetEveryone = Boolean(val);
+  await saveConfig();
+  return current.targetEveryone;
+}
 
 export async function addTargetUserId(id) {
   if (current.targetUserIds.includes(id)) return false;
