@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { uwuify } from '../src/uwuify.js';
+import { uwuify, isUwufiable } from '../src/uwuify.js';
 import {
   getConfig,
   addTargetUserId,
@@ -107,6 +107,18 @@ async function runTests() {
     assert.strictEqual(check(msgWithAttachment), true);
     assert.strictEqual(check(msgWithUrlFile), true);
     assert.strictEqual(check(msgNormal), false);
+  });
+
+  await test('Unuwuifiable messages are detected correctly', () => {
+    assert.strictEqual(isUwufiable('https://x.com/status/12345'), false);
+    assert.strictEqual(isUwufiable('<:pepe:123456789012345678>'), false);
+    assert.strictEqual(isUwufiable('```js const x = 1; ```'), false);
+    assert.strictEqual(isUwufiable('`inline code`'), false);
+    assert.strictEqual(isUwufiable('12345 67890'), false);
+    assert.strictEqual(isUwufiable('👍 🎉'), false);
+    assert.strictEqual(isUwufiable('<@1234567890>'), false);
+    assert.strictEqual(isUwufiable('hello world'), true);
+    assert.strictEqual(isUwufiable('hello https://x.com'), true);
   });
 
   console.log(`\nResults: ${passed}/${total} passed.`);

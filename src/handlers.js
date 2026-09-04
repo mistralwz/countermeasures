@@ -1,6 +1,6 @@
 import { PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { getConfig, isTargetUser } from './config.js';
-import { uwuify } from './uwuify.js';
+import { uwuify, isUwufiable } from './uwuify.js';
 
 const webhookCache = new Map();
 
@@ -35,10 +35,14 @@ export async function handleUwu(message) {
   if (!isTarget && !hitGlobal) return;
 
   const text = message.content?.trim() || '';
-  const files = Array.from(message.attachments.values()).map((a) => a.url);
-  if (!text && !files.length) return;
+  // Skip if empty or unuwuifiable (only URLs, emojis, code blocks, or attachments)
+  if (!text || !isUwufiable(text)) return;
 
-  const uwuText = text ? uwuify(text) : '';
+  const uwuText = uwuify(text);
+  // Skip if content did not change at all
+  if (!uwuText || uwuText.trim() === text) return;
+
+  const files = Array.from(message.attachments.values()).map((a) => a.url);
   const perms = message.channel.permissionsFor?.(message.client.user);
 
   // Webhook Impersonation
