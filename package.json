@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
+    "clear-guilds": "node src/index.js --clear-guilds",
     "test": "node test/test.js"
   },
   "license": "MIT",
