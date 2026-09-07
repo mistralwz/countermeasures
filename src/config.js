@@ -6,6 +6,8 @@ const DEFAULTS = {
   suppressKeywords: ['twitter.com', 'x.com', 'tiktok.com', 'instagram.com'],
   uwuMode: 'webhook',
   globalChance: 0,
+  uwuEnabled: true,
+  suppressEnabled: true,
   deleteOriginalMessage: true,
 };
 
@@ -84,4 +86,19 @@ export async function setGlobalChance(chance) {
   await saveConfig();
   return c;
 }
+
+export async function toggleFeature(feature, state = null) {
+  if (feature === 'uwu') {
+    current.uwuEnabled = typeof state === 'boolean' ? state : current.uwuEnabled === false;
+    await saveConfig();
+    return current.uwuEnabled;
+  }
+  if (feature === 'suppress') {
+    current.suppressEnabled = typeof state === 'boolean' ? state : current.suppressEnabled === false;
+    await saveConfig();
+    return current.suppressEnabled;
+  }
+  return null;
+}
+
 

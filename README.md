@@ -17,10 +17,12 @@ Discord bot to uwuify messages from targeted users via webhook impersonation and
 ## Commands
 
 Requires `Manage Server` permission:
+- `/toggle <feature> [enabled]`: Toggle bot features (`Uwuify` or `Embed Suppression`) on/off.
+- `/uwu toggle` / `/suppress toggle`: Toggle individual features on/off.
 - `/uwu add <user>` / `/uwu remove <user>` / `/uwu list`: Manage target users.
 - `/uwu chance <percent>`: Set server-wide random chance (0-100%) for everyone.
 - `/uwu mode <webhook|reply>`: Switch between Webhook impersonation and Reply mode.
-- `/suppress add <keyword>` / `/suppress remove <keyword>` / `/suppress list`: Manage link domains/keywords to strip embeds from.
+- `/suppress add <keyword>` / `/suppress remove <keyword>` / `/suppress list`: Manage link domains/keywords/filenames to strip embeds from.
 
 *Changes persist automatically in `config.json`.*
 

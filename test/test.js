@@ -9,8 +9,9 @@ import {
   removeSuppressKeyword,
   setUwuMode,
   setGlobalChance,
+  toggleFeature,
 } from '../src/config.js';
-import { uwuCommand, suppressCommand } from '../src/commands.js';
+import { uwuCommand, suppressCommand, toggleCommand } from '../src/commands.js';
 
 let passed = 0;
 let total = 0;
@@ -146,6 +147,25 @@ async function runTests() {
     const imgWithCaption = { content: 'Look at this cat', attachments: [{ url: 'https://cdn.../cat.png' }] };
     const text3 = imgWithCaption.content?.trim() || '';
     assert.strictEqual(!text3 || !isUwufiable(text3), false);
+  });
+
+  await test('Feature toggles enable and disable features correctly', async () => {
+    // Test uwu toggle
+    await toggleFeature('uwu', false);
+    assert.strictEqual(getConfig().uwuEnabled, false);
+    await toggleFeature('uwu');
+    assert.strictEqual(getConfig().uwuEnabled, true);
+
+    // Test suppress toggle
+    await toggleFeature('suppress', false);
+    assert.strictEqual(getConfig().suppressEnabled, false);
+    await toggleFeature('suppress');
+    assert.strictEqual(getConfig().suppressEnabled, true);
+
+    // Test toggle command JSON definition
+    const toggleJson = toggleCommand.data.toJSON();
+    assert.strictEqual(toggleJson.name, 'toggle');
+    assert.strictEqual(toggleJson.options.length, 2);
   });
 
   console.log(`\nResults: ${passed}/${total} passed.`);

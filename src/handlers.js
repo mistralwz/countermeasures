@@ -28,6 +28,8 @@ export async function handleUwu(message) {
   if (!message.author || message.author.bot || message.webhookId) return;
 
   const cfg = getConfig();
+  if (cfg.uwuEnabled === false) return;
+
   const isTarget = isTargetUser(message.author.id);
   const hitGlobal = (cfg.globalChance || 0) > 0 && Math.random() < cfg.globalChance;
 
@@ -102,6 +104,7 @@ export async function handleEmbeds(message) {
   if (!message || message.flags?.has(MessageFlags.SuppressEmbeds)) return;
 
   const cfg = getConfig();
+  if (cfg.suppressEnabled === false) return;
   if (!cfg.suppressKeywords?.length) return;
 
   const content = (message.content || '').toLowerCase();

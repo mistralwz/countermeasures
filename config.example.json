@@ -1,6 +1,5 @@
 {
   "targetUserIds": [],
-  "targetEveryone": false,
   "suppressKeywords": [
     "twitter.com",
     "x.com",
@@ -8,6 +7,8 @@
     "instagram.com"
   ],
   "uwuMode": "webhook",
-  "uwuChance": 1.0,
+  "globalChance": 0,
+  "uwuEnabled": true,
+  "suppressEnabled": true,
   "deleteOriginalMessage": true
 }
