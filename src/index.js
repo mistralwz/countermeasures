@@ -31,16 +31,54 @@ async function purgeGuildCommands(clientInstance, targetGuildId = null) {
   }
 }
 
-// Standalone one-shot cleaner flag: npm run clear-guilds
-if (process.argv.includes('--clear-guilds')) {
+// CLI inspection tool: npm run list-commands
+if (process.argv.includes('--list-commands')) {
   client.once(Events.ClientReady, async (c) => {
-    console.log(`[Cleaner] Online as ${c.user.tag}. Checking ${c.guilds.cache.size} guild(s) for stale commands...`);
+    console.log(`\n📋 Inspecting registered commands for ${c.user.tag}...`);
+    const globals = await c.application.commands.fetch();
+    console.log(`\n🌐 Global Commands (${globals.size}):`);
+    if (globals.size === 0) console.log('   (None)');
+    else globals.forEach((cmd) => console.log(`   - /${cmd.name} (id: ${cmd.id}): ${cmd.description}`));
+
+    console.log(`\n🏰 Guild Commands across ${c.guilds.cache.size} server(s):`);
+    for (const [id, guild] of c.guilds.cache) {
+      const gCmds = await guild.commands.fetch().catch(() => null);
+      console.log(`   Server "${guild.name}" (${id}): ${gCmds?.size || 0} command(s)`);
+      gCmds?.forEach((cmd) => console.log(`      - /${cmd.name} (id: ${cmd.id}): ${cmd.description}`));
+    }
+    client.destroy();
+    process.exit(0);
+  });
+} else if (process.argv.includes('--clear-global')) {
+  // One-shot wipe global commands: npm run clear-global
+  client.once(Events.ClientReady, async (c) => {
+    console.log(`[Cleaner] Wiping ALL global commands for ${c.user.tag}...`);
+    await c.application.commands.set([]);
+    console.log('[Cleaner] Successfully wiped all global commands. Exiting.');
+    client.destroy();
+    process.exit(0);
+  });
+} else if (process.argv.includes('--clear-guilds')) {
+  // One-shot wipe guild commands: npm run clear-guilds
+  client.once(Events.ClientReady, async (c) => {
+    console.log(`[Cleaner] Wiping guild commands across ${c.guilds.cache.size} server(s)...`);
     await purgeGuildCommands(c);
-    console.log('[Cleaner] All stale guild commands purged. Exiting.');
+    console.log('[Cleaner] All guild commands purged. Exiting.');
+    client.destroy();
+    process.exit(0);
+  });
+} else if (process.argv.includes('--clear-all')) {
+  // One-shot wipe everything: npm run clear-all
+  client.once(Events.ClientReady, async (c) => {
+    console.log(`[Cleaner] Wiping ALL global and guild commands for ${c.user.tag}...`);
+    await c.application.commands.set([]);
+    await purgeGuildCommands(c);
+    console.log('[Cleaner] Completely wiped all global and guild commands. Exiting.');
     client.destroy();
     process.exit(0);
   });
 } else {
+  // Standard bot runtime
   client.once(Events.ClientReady, async (c) => {
     console.log(`[Countermeasures] Online as ${c.user.tag} across ${c.guilds.cache.size} guild(s).`);
 
@@ -49,14 +87,21 @@ if (process.argv.includes('--clear-guilds')) {
       const guildId = process.env.GUILD_ID?.trim();
 
       if (guildId) {
-        await c.application.commands.set(body, guildId);
-        console.log(`[Commands] Synced ${body.length} commands to guild ${guildId}.`);
+        const synced = await c.application.commands.set(body, guildId);
+        console.log(`[Commands] Synced ${synced.size} command(s) to guild ${guildId}: ${synced.map((cmd) => '/' + cmd.name).join(', ')}.`);
+
+        // Clear global commands so they don't duplicate or conflict with guild commands
+        const currentGlobals = await c.application.commands.fetch();
+        if (currentGlobals.size > 0) {
+          await c.application.commands.set([]);
+          console.log(`[Commands] Purged ${currentGlobals.size} stale global command(s).`);
+        }
         await purgeGuildCommands(c, guildId);
       } else {
         // Purge any stale guild-level commands so they don't shadow global commands
         await purgeGuildCommands(c);
-        await c.application.commands.set(body);
-        console.log(`[Commands] Synced ${body.length} commands globally.`);
+        const synced = await c.application.commands.set(body);
+        console.log(`[Commands] Synced ${synced.size} global command(s): ${synced.map((cmd) => '/' + cmd.name).join(', ')}.`);
       }
     } catch (err) {
       console.error('[Commands] Auto-sync failed on startup:', err.message);

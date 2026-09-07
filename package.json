@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
+    "list-commands": "node src/index.js --list-commands",
+    "clear-global": "node src/index.js --clear-global",
     "clear-guilds": "node src/index.js --clear-guilds",
+    "clear-all": "node src/index.js --clear-all",
     "test": "node test/test.js"
   },
   "license": "MIT",
