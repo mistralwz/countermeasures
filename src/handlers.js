@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, MessageFlags, AttachmentBuilder } from 'discord.js';
+import { PermissionFlagsBits, MessageFlags, AttachmentBuilder, EmbedBuilder } from 'discord.js';
 import { getConfig, isTargetUser } from './config.js';
 import { uwuify, isUwufiable } from './uwuify.js';
 
@@ -22,6 +22,51 @@ async function getWebhook(channel, client) {
     console.error(`[Webhook] Error in #${target.name}:`, err.message);
     return null;
   }
+}
+
+export async function buildReplyEmbed(message) {
+  if (!message?.reference?.messageId) return null;
+
+  const jumpUrl = `https://discord.com/channels/${message.guildId || '@me'}/${message.reference.channelId || message.channelId}/${message.reference.messageId}`;
+
+  let referenced = null;
+  try {
+    referenced = await message.fetchReference?.();
+  } catch {
+    // Referenced message may be deleted or inaccessible
+  }
+
+  const embed = new EmbedBuilder();
+
+  if (referenced) {
+    const authorName = referenced.member?.displayName || referenced.author?.displayName || referenced.author?.username || 'User';
+    const avatarURL = referenced.author?.displayAvatarURL?.({ extension: 'png', size: 128 });
+
+    embed.setAuthor({
+      name: `${authorName} ↩️`,
+      iconURL: avatarURL || undefined,
+      url: jumpUrl,
+    });
+
+    let content = referenced.content?.trim() || '';
+    if (content.length > 150) {
+      content = content.slice(0, 150).trim() + '…';
+    }
+
+    if (content && referenced.attachments?.size > 0) {
+      content += ' 📎';
+    } else if (!content && referenced.attachments?.size > 0) {
+      content = '*[(click to see attachment)]*';
+    } else if (!content) {
+      content = '*[(click to view message)]*';
+    }
+
+    embed.setDescription(`**[Reply to:](${jumpUrl})** ${content}`);
+  } else {
+    embed.setDescription(`**[Replying to message](${jumpUrl})** ↩️`);
+  }
+
+  return embed;
 }
 
 export async function handleUwu(message) {
@@ -73,12 +118,15 @@ export async function handleUwu(message) {
     try {
       const hook = await getWebhook(message.channel, message.client);
       if (hook) {
-        // Send webhook with re-uploaded attachments first
+        const replyEmbed = await buildReplyEmbed(message);
+
+        // Send webhook with re-uploaded attachments and reply embed first
         await hook.send({
           content: uwuText || undefined,
           username: (message.member?.displayName || message.author.username).slice(0, 80),
           avatarURL: message.author.displayAvatarURL({ extension: 'png', size: 512 }),
           files: validFiles.length ? validFiles : undefined,
+          embeds: replyEmbed ? [replyEmbed] : undefined,
           threadId: message.channel.isThread?.() ? message.channel.id : undefined,
           allowedMentions: { parse: ['users'] },
         });

@@ -12,6 +12,7 @@ import {
   toggleFeature,
 } from '../src/config.js';
 import { uwuCommand, suppressCommand, toggleCommand } from '../src/commands.js';
+import { buildReplyEmbed } from '../src/handlers.js';
 
 let passed = 0;
 let total = 0;
@@ -166,6 +167,77 @@ async function runTests() {
     const toggleJson = toggleCommand.data.toJSON();
     assert.strictEqual(toggleJson.name, 'toggle');
     assert.strictEqual(toggleJson.options.length, 2);
+  });
+
+  await test('buildReplyEmbed returns null when no reference exists', async () => {
+    const embed = await buildReplyEmbed({ reference: null });
+    assert.strictEqual(embed, null);
+    const embed2 = await buildReplyEmbed({});
+    assert.strictEqual(embed2, null);
+  });
+
+  await test('buildReplyEmbed creates rich embed when reference resolves', async () => {
+    const mockMessage = {
+      guildId: '111',
+      channelId: '222',
+      reference: { messageId: '333', channelId: '222' },
+      fetchReference: async () => ({
+        id: '333',
+        content: 'Check out this cool test message!',
+        author: {
+          username: 'tester',
+          displayAvatarURL: () => 'https://cdn.discordapp.com/avatars/1/avatar.png',
+        },
+        attachments: new Map(),
+      }),
+    };
+
+    const embed = await buildReplyEmbed(mockMessage);
+    assert.ok(embed);
+    const json = embed.toJSON();
+    assert.strictEqual(json.author.name, 'tester ↩️');
+    assert.strictEqual(json.author.icon_url, 'https://cdn.discordapp.com/avatars/1/avatar.png');
+    assert.ok(json.description.includes('https://discord.com/channels/111/222/333'));
+    assert.ok(json.description.includes('Check out this cool test message!'));
+  });
+
+  await test('buildReplyEmbed truncates long text and notes attachments', async () => {
+    const longContent = 'A'.repeat(200);
+    const mockMessage = {
+      guildId: '111',
+      channelId: '222',
+      reference: { messageId: '444', channelId: '222' },
+      fetchReference: async () => ({
+        id: '444',
+        content: longContent,
+        author: {
+          username: 'uploader',
+          displayAvatarURL: () => null,
+        },
+        attachments: new Map([['att1', { name: 'photo.png' }]]),
+      }),
+    };
+
+    const embed = await buildReplyEmbed(mockMessage);
+    const json = embed.toJSON();
+    assert.ok(json.description.includes('… 📎'));
+    assert.ok(json.description.length < 250);
+  });
+
+  await test('buildReplyEmbed creates fallback jump link if fetchReference fails', async () => {
+    const mockMessage = {
+      guildId: '111',
+      channelId: '222',
+      reference: { messageId: '555', channelId: '222' },
+      fetchReference: async () => {
+        throw new Error('Unknown Message');
+      },
+    };
+
+    const embed = await buildReplyEmbed(mockMessage);
+    assert.ok(embed);
+    const json = embed.toJSON();
+    assert.strictEqual(json.description, '**[Replying to message](https://discord.com/channels/111/222/555)** ↩️');
   });
 
   console.log(`\nResults: ${passed}/${total} passed.`);
